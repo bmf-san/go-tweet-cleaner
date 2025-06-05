@@ -58,6 +58,25 @@ type TwitterAPIResponse struct {
 	} `json:"errors"`
 }
 
+// checkTweetExists checks if a tweet still exists using Twitter API
+func checkTweetExists(client *http.Client, tweetID string) bool {
+	url := fmt.Sprintf("https://api.twitter.com/2/tweets/%s", tweetID)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return false
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	// 200: tweets exists
+	// 404: tweet does not exist (deleted)
+	return resp.StatusCode == 200
+}
+
 func runDelete(cmd *cobra.Command, args []string) {
 	// Check for required credentials
 	if consumerKey == "" || consumerSecret == "" || accessToken == "" || accessTokenSecret == "" {
@@ -227,12 +246,12 @@ func runDelete(cmd *cobra.Command, args []string) {
 	httpClient := config.Client(oauth1.NoContext, token)
 
 	// Execute deletion
-	fmt.Println("Executing deletion...")
+	fmt.Println("Checking tweets status and executing deletion...")
 	success := 0
 	failures := 0
+	alreadyDeleted := 0
 
-	// Twitter API v2 only allows 50 posts per 15 minutes for free tier
-	// We'll need to respect this limit
+	// Twitter API v2 only allows 50 requests per 15 minutes for free tier
 	const rateLimit = 50
 	const rateLimitWindow = 15 * time.Minute
 
@@ -241,6 +260,13 @@ func runDelete(cmd *cobra.Command, args []string) {
 		if i > 0 && i%rateLimit == 0 {
 			fmt.Printf("Rate limit reached. Waiting for %s before continuing...\n", rateLimitWindow)
 			time.Sleep(rateLimitWindow)
+		}
+
+		// Check if tweet still exists
+		if !checkTweetExists(httpClient, tweet.ID) {
+			fmt.Printf("Tweet already deleted: ID %s\n", tweet.ID)
+			alreadyDeleted++
+			continue
 		}
 
 		// Create delete request using OAuth 1.0a
@@ -283,7 +309,8 @@ func runDelete(cmd *cobra.Command, args []string) {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	fmt.Printf("\nCompleted: Successfully deleted %d/%d tweets. Failed: %d\n", success, len(tweets), failures)
+	fmt.Printf("\nCompleted: Successfully deleted %d/%d tweets. Failed: %d, Already deleted: %d\n",
+		success, len(tweets), failures, alreadyDeleted)
 
 	if failures > 0 {
 		fmt.Println("\nNote: Some tweets may have failed to delete because:")
