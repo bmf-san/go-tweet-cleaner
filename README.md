@@ -120,6 +120,7 @@ If your Twitter archive is in the current directory:
 - `--access-token-secret`: Twitter Access Token Secret (required)
 - `--archive`: Path to Twitter archive directory (required)
 - `--limit`: Number of tweets to process at once (default: 100, maximum: 100)
+- `--offset`: Number of tweets to skip before processing (default: 0)
 - `--dry-run`: Only show tweets that would be deleted without actually deleting
 - `--sort`: Sort order for tweets: 'newest' (default), 'oldest', or 'original'
 

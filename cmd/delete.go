@@ -66,13 +66,27 @@ func checkTweetExists(client *http.Client, tweetID string) bool {
 		return false
 	}
 
+	// Add required headers for Twitter API v2
+	req.Header.Add("Accept", "application/json")
+
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Printf("Error checking tweet %s: %v\n", tweetID, err)
 		return false
 	}
 	defer resp.Body.Close()
 
-	// 200: tweets exists
+	// Parse response
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error reading response for tweet %s: %v\n", tweetID, err)
+		return false
+	}
+
+	// Debug output
+	fmt.Printf("Check tweet %s response: HTTP %d - %s\n", tweetID, resp.StatusCode, string(body))
+
+	// 200: tweet exists
 	// 404: tweet does not exist (deleted)
 	return resp.StatusCode == 200
 }
@@ -202,9 +216,22 @@ func runDelete(cmd *cobra.Command, args []string) {
 	}
 
 	// Limit to the specified number of tweets
-	if limit > 0 && len(tweets) > limit {
-		tweets = tweets[:limit]
-		fmt.Printf("Limited to %d tweets as specified\n", limit)
+	if limit > 0 {
+		// Apply offset first
+		if offset > 0 {
+			if offset >= len(tweets) {
+				fmt.Printf("Offset %d is greater than the number of tweets (%d)\n", offset, len(tweets))
+				return
+			}
+			tweets = tweets[offset:]
+			fmt.Printf("Skipped %d tweets as specified by offset\n", offset)
+		}
+
+		// Then apply limit
+		if len(tweets) > limit {
+			tweets = tweets[:limit]
+			fmt.Printf("Limited to %d tweets as specified\n", limit)
+		}
 	}
 
 	// Display tweets

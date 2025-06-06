@@ -13,6 +13,7 @@ var (
 	accessToken       string
 	accessTokenSecret string
 	limit             int
+	offset            int
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -36,6 +37,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&accessToken, "access-token", "", "Twitter Access Token")
 	rootCmd.PersistentFlags().StringVar(&accessTokenSecret, "access-token-secret", "", "Twitter Access Token Secret")
 	rootCmd.PersistentFlags().IntVar(&limit, "limit", 100, "Number of tweets to process at once (maximum 100)")
+	rootCmd.PersistentFlags().IntVar(&offset, "offset", 0, "Number of tweets to skip before processing")
 
 	rootCmd.MarkPersistentFlagRequired("consumer-key")
 	rootCmd.MarkPersistentFlagRequired("consumer-secret")
